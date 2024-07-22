@@ -1,0 +1,119 @@
+---
+title: "Feeds Project"
+author: "Ken"
+date: "2024-07-22"
+output: word_document
+---
+```{r}
+library(dplyr)
+library(shiny)
+library(shinyWidgets)
+```
+```{r}
+## define UI
+ui <- fluidPage(
+  titlePanel("Dairy Farmer Data Collection Tool"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      h3("Farmer Demographics"),
+      numericInput("age", "Age:", min = 0, max = 100, value = NA),
+      radioButtons("gender", "Gender:",
+                   choices = list("Male" = "Male", "Female" = "Female", "Other" = "Other")),
+      numericInput("farm_size", "Farm Size (acres/hectares):", min = 0, value = NA),
+      
+      h3("Feed Types Used"),
+      checkboxGroupInput("forages", "Types of Forages Used:",
+                         choices = list("Grass" = "Grass", "Silage" = "Silage", "Hay" = "Hay", "Other" = "Other")),
+      radioButtons("concentrates", "Do you use concentrates?",
+                   choices = list("Yes" = "Yes", "No" = "No")),
+      textInput("byproducts", "What by-products do you use for feeding?", ""),
+      
+      h3("Milk Production Data"),
+      numericInput("milk_yield", "Average Daily Milk Yield per Cow (liters):", min = 0, value = NA),
+      checkboxGroupInput("milk_quality", "Milk Quality Indicators Monitored:",
+                         choices = list("Fat content" = "Fat content", "Protein content" = "Protein content", 
+                                        "Somatic cell count" = "Somatic cell count", "Other" = "Other")),
+      
+      h3("Training Effectiveness"),
+      sliderInput("knowledge_gain", "Rate the Knowledge Gained from Training (1-5):", min = 1, max = 5, value = 3),
+      radioButtons("new_practices", "Have you implemented any new practices based on the training?",
+                   choices = list("Yes" = "Yes", "No" = "No")),
+      textAreaInput("practice_description", "If yes, please describe the new practices:", "")
+    ),
+    
+    mainPanel(
+      h3("Review and Submit"),
+      actionButton("submit", "Submit Data"),
+      tableOutput("responses")
+    )
+  )
+)
+
+```
+
+```{r}
+# Define server logic
+server <- function(input, output, session) {
+  responses <- reactiveVal(data.frame(
+    Age = numeric(),
+    Gender = character(),
+    FarmSize = numeric(),
+    Forages = character(),
+    Concentrates = character(),
+    ByProducts = character(),
+    MilkYield = numeric(),
+    MilkQuality = character(),
+    KnowledgeGain = numeric(),
+    NewPractices = character(),
+    PracticeDescription = character(),
+    stringsAsFactors = FALSE
+  ))
+  
+  observeEvent(input$submit, {
+    new_response <- data.frame(
+      Age = input$age,
+      Gender = input$gender,
+      FarmSize = input$farm_size,
+      Forages = paste(input$forages, collapse = ", "),
+      Concentrates = input$concentrates,
+      ByProducts = input$byproducts,
+      MilkYield = input$milk_yield,
+      MilkQuality = paste(input$milk_quality, collapse = ", "),
+      KnowledgeGain = input$knowledge_gain,
+      NewPractices = input$new_practices,
+      PracticeDescription = input$practice_description,
+      stringsAsFactors = FALSE
+    )
+    all_responses<- rbind(responses(), new_response)
+    responses(all_responses)
+    
+    
+    #save to csv
+    # write.csv(all_responses,"responses.csv",row.names = FALSE)
+    
+    
+    # Reset inputs
+    updateNumericInput(session, "age", value = NA)
+    updateRadioButtons(session, "gender", selected = character(0))
+    updateNumericInput(session, "farm_size", value = NA)
+    updateCheckboxGroupInput(session, "forages", selected = character(0))
+    updateRadioButtons(session, "concentrates", selected = character(0))
+    updateTextInput(session, "byproducts", value = "")
+    updateNumericInput(session, "milk_yield", value = NA)
+    updateCheckboxGroupInput(session, "milk_quality", selected = character(0))
+    updateSliderInput(session, "knowledge_gain", value = 3)
+    updateRadioButtons(session, "new_practices", selected = character(0))
+    updateTextAreaInput(session, "practice_description", value = "")
+  
+  })
+  
+  output$responses <- renderTable({
+    responses()
+  })
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+
